@@ -45,8 +45,7 @@ def clean_graph(graph):
     return {'nodes': new_nodes, 'edges': list(graph['edges'])}
     
 
-def remove_edges(graph, n, fr=True, to=True):
-    n_id = n['id']
+def remove_edges(graph, n_id, fr=True, to=True):
     new_edges = [e for e in graph['edges'] if 
                  (e['from_id'] != n_id or not fr) and (e['to_id'] != n_id or not to)]
     graph['edges'] = new_edges
@@ -55,6 +54,10 @@ def remove_edge(graph, fr_id, rel, to_id):
     new_edges = [e for e in graph['edges'] if 
                  not (e['from_id'] == fr_id and e['to_id'] == to_id and e['relation_type'] == rel)]
     graph['edges'] = new_edges
+
+def remove_node(graph, n_id):
+    new_nodes = [n for n in graph['nodes'] if not n['id'] == n_id]
+    graph['nodes'] = new_nodes
     
 def add_node(graph, n):
     graph['nodes'].append(n)

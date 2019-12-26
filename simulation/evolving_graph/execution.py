@@ -142,6 +142,9 @@ class WalkExecutor(ActionExecutor):
 
         node_room = _get_room_node(state, node)
 
+        if node_room == char_room:
+            return True
+
         doors = state.get_nodes_by_attr('class_name', 'door')
         doorjambs = state.get_nodes_by_attr('class_name', 'doorjamb')
 
@@ -1326,6 +1329,12 @@ def BFS_check_closed(state: EnvironmentState, adj_lists: dict, s):
     q.put(s)
     while not q.empty():
         v = q.get()
+        if v not in adj_lists:
+            print("v value not in the dict")
+            print(v)
+            print("adj_list")
+            print(adj_lists)
+            assert False
         for u, d in adj_lists[v]:
             door_node = state.get_node(d)
             if State.CLOSED not in door_node.states and u not in prev:

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import PIL
 import numpy as np
 
-import plotly.plotly as py
+import chart_studio.plotly as py
 import plotly.graph_objs as go
 
 import networkx as nx

@@ -38,6 +38,17 @@ class UnityCommunication(object):
                                       'intParams': [] if scene_index is None else [scene_index]})
         return response['success']
 
+    def add_camera(self, position=[0,0,0], rotation=[0,0,0], ):
+        cam_dict = {
+            'position': {'x': position[0], 'y': position[1], 'z': position[2]},
+            'rotation': {'x': rotation[0], 'y': rotation[1], 'z': rotation[2]},
+            #‘focal_length’: 10.
+        }
+        response = self.post_command(
+            {'id': str(time.time()), 'action': 'add_camera',
+             'stringParams': [json.dumps(cam_dict)]})
+        return response['success'], response['message']
+
     def camera_count(self):
         """
         Returns the number of cameras in the scene
@@ -105,10 +116,10 @@ class UnityCommunication(object):
         response = self.post_command({'id': str(time.time()), 'action': 'point_cloud'})
         return response['success'], json.loads(response['message'])
 
-    def render_script(self, script, randomize_execution=False, random_seed=-1, processing_time_limit=10,
-                      skip_execution=False, find_solution=True, output_folder='Output/', file_name_prefix="script",
+    def render_script(self, script, randomize_execution=False, random_seed=-1, processing_time_limit=60,
+                      skip_execution=False, find_solution=False, output_folder='Output/', file_name_prefix="script",
                       frame_rate=5, image_synthesis=['normal'], capture_screenshot=False, save_pose_data=False,
-                      image_width=640, image_height=480, gen_vid=True,
+                      image_width=1280, image_height=960, gen_vid=True,
                       save_scene_states=False, character_resource='Chars/Male1', camera_mode='AUTO'):
         """
         :param script: a list of script lines
@@ -141,22 +152,60 @@ class UnityCommunication(object):
                   'image_width': image_width, 'image_height': image_height}
         response = self.post_command({'id': str(time.time()), 'action': 'render_script',
                                       'stringParams': [json.dumps(params)] + script})
+        # print(response, gen_vid, image_synthesis)
         if response['success']:
-            if gen_vid and len(image_synthesis) > 0:
-                generate_video(image_synthesis, output_folder, file_name_prefix, frame_rate)
+            if gen_vid and image_synthesis is not None:
+                generate_video(image_synthesis, output_folder, 
+                               file_name_prefix, frame_rate)
         return response['success'], response['message']
+    
+    def render_scripts_separately(self, scripts, with_video=False, camera_mode="AUTO"):
+        if not with_video:
+            for script in scripts: 
+                succ, msg = self.render_script([script], processing_time_limit=600)
+                print("[{}]: {}, {}".format(script, succ, msg))
+        else:
+            count = 0
+            for script in scripts: 
+                succ, msg = self.render_script([script], processing_time_limit=600, 
+                                               find_solution=False,
+                                               image_width=1280,
+                                               image_height=960,
+                                               output_folder='strange/',
+                                               image_synthesis=['normal'],
+                                               file_name_prefix='relax{}'.format(count),
+                                               camera_mode=camera_mode)
+                count=count + 1
+                print(count)
+                print("[{}]: {}, {}".format(script, succ, msg))
+
+    def add_character(self, character_resource='Chars/Male1'):
+        response = self.post_command(
+            {'id': str(time.time()), 'action': 'add_character', 
+             'stringParams':[json.dumps({'character_resource': character_resource})]})
+
+        return response['success'], response['message']
+
+    def control_character(self, character_id, character_resource='Chars/Male1'):
+        response = self.post_command(
+            {'id': str(time.time()), 'action': 'control_character',
+             'intParams': [character_id], 
+             'stringParams':[json.dumps({'character_resource': character_resource})]})
+
+        return response['success'], response['message']        
 
 def generate_video(image_syn, output_folder, prefix, frame_rate):
     import os
     import subprocess
     
     curr_folder = os.path.dirname(os.path.realpath(__file__))
-    vid_folder = '{}/../{}/{}/'.format(curr_folder, output_folder, prefix)
+    vid_folder = './{}/{}/'.format(output_folder, prefix)
+    print('Generating .mp4')
     
     for vid_mod in image_syn:
-        subprocess.call(['ffmpeg', '-i',
+        subprocess.call(['ffmpeg', '-i', 
                          '{}/Action_%04d_{}.png'.format(vid_folder, vid_mod), 
-                         '-framerate', str(frame_rate),
+                         '-framerate', '{}'.format(frame_rate),
                          '-pix_fmt', 'yuv420p',
                          '{}/Action_{}.mp4'.format(vid_folder, vid_mod)])
         files_delete = glob.glob('{}/Action_*_{}.png'.format(vid_folder, vid_mod))
